@@ -52,7 +52,9 @@ export function Footer() {
                   {business.registrationNumber}
                 </dd>
               </div>
-              <div className="flex justify-between gap-4 border-b border-white/5 pb-2">
+              <div
+                className={`flex justify-between gap-4 ${business.address ? "border-b border-white/5 pb-2" : ""}`}
+              >
                 <dt className="text-zinc-500">이메일</dt>
                 <dd className="text-right">
                   <a
@@ -63,10 +65,12 @@ export function Footer() {
                   </a>
                 </dd>
               </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-zinc-500">소재지</dt>
-                <dd className="text-right text-zinc-300">{business.address}</dd>
-              </div>
+              {business.address && (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-500">소재지</dt>
+                  <dd className="text-right text-zinc-300">{business.address}</dd>
+                </div>
+              )}
             </dl>
           </div>
         </div>

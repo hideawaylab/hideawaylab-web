@@ -318,7 +318,7 @@ export default function WorkspacePage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full rounded-xl border border-white/12 bg-black/40 px-3.5 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-emerald-400/60 focus:outline-none"
-                placeholder="ceo@hideawaylab.kr"
+                placeholder={siteConfig.business.email}
               />
             </div>
 

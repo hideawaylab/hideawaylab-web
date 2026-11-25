@@ -26,13 +26,12 @@ export const siteConfig = {
     url: "https://hideawaylab.kr",
     tagline: "AI와 함께 일상을 바꾸는 실용적인 소프트웨어를 만듭니다.",
   },
-  // TODO: 실제 사업자 정보로 아래 값을 수정해 주세요.
   business: {
     companyName: "하이드어웨이 랩 (Hideaway Lab)",
-    ceoName: "대표자명 입력 필요",
-    registrationNumber: "000-00-00000",
-    email: "ceo@hideawaylab.kr",
-    address: "사업장 주소 입력 필요",
+    ceoName: "신정우",
+    registrationNumber: "662-08-01900",
+    email: "k072810@gmail.com",
+    address: "",
     foundedYear: 2026,
   },
   projects: [
