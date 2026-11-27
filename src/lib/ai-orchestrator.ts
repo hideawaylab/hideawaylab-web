@@ -8,6 +8,7 @@ import {
   type WorkerModelId,
   type WorkspaceTaskRecord,
 } from "./db";
+import { fetchReferenceUrls } from "./web-tools";
 
 export const ALLOWED_LEADER_MODELS: readonly LeaderModelId[] = [
   "gemini-4-hydrogen",
@@ -21,6 +22,19 @@ export const ALLOWED_WORKER_MODELS: readonly WorkerModelId[] = [
 ] as const;
 
 export const ALLOWED_MODES: readonly TaskMode[] = ["fast", "deep"] as const;
+
+export interface UploadedAttachment {
+  name: string;
+  mimeType: string;
+  base64Data?: string;
+  textContent?: string;
+  sizeBytes: number;
+}
+
+export interface OrchestrationToolContext {
+  attachment?: UploadedAttachment | null;
+  referenceUrls?: string[];
+}
 
 const PASS_SCORE_THRESHOLD = 85;
 const STEP_DELAY_MS = 1200;
@@ -93,6 +107,54 @@ function parseJsonSafe<T>(text: string): T | null {
   }
 }
 
+type MultimodalBlock =
+  | { type: "text"; text: string }
+  | { type: "image"; data: string; mime_type: string }
+  | { type: "document"; data: string; mime_type: "application/pdf" };
+
+function buildModelInput(
+  promptText: string,
+  attachment?: UploadedAttachment | null
+): string | MultimodalBlock[] {
+  if (!attachment) {
+    return promptText;
+  }
+
+  if (attachment.textContent) {
+    return `${promptText}\n\n[첨부 텍스트 파일: ${attachment.name}]\n${attachment.textContent}`;
+  }
+
+  if (attachment.base64Data && attachment.mimeType === "application/pdf") {
+    return [
+      {
+        type: "text",
+        text: `${promptText}\n\n[첨부 PDF 문서(${attachment.name})를 직접 읽고 핵심 내용을 분석에 반영하세요.]`,
+      },
+      {
+        type: "document",
+        data: attachment.base64Data,
+        mime_type: "application/pdf",
+      },
+    ];
+  }
+
+  if (attachment.base64Data && attachment.mimeType.startsWith("image/")) {
+    return [
+      {
+        type: "text",
+        text: `${promptText}\n\n[첨부 이미지(${attachment.name})를 시각적으로 분석해 기획·개발·재무·마케팅에 반영하세요.]`,
+      },
+      {
+        type: "image",
+        data: attachment.base64Data,
+        mime_type: attachment.mimeType,
+      },
+    ];
+  }
+
+  return promptText;
+}
+
 interface FastWorkersResult {
   title: string;
   researchOutput: string;
@@ -127,26 +189,88 @@ interface DebateResult {
 }
 
 const FINANCE_GUIDANCE = [
-  "재무 분석가 AI는 반드시 아래 5가지를 구체적 원화(KRW)/달러(USD) 수치와 계산 근거로 작성해야 합니다:",
+  "재무 분석가 AI는 반드시 마크다운 표와 구체적 원화(KRW)/달러(USD) 수치·계산 근거로 아래 5가지를 작성해야 합니다:",
   "1) 초기 구축 비용 (도메인, 디자인/개발 툴, 스토어 등록비 등 일회성 비용)",
-  "2) 월 고정 및 변동 운영비 (오라클 무료 서버 vs 유료 확장 시점, Gemini API 예상 토큰 비용, 결제 수수료, 이메일/스토리지 등)",
+  "2) 월 고정 및 변동 운영비 (오라클 무료 서버 vs 유료 확장 시점, Gemini API 예상 토큰 비용, 결제 수수료, 외부 서비스 비용)",
   "3) 무료 티어(0원)로 버틸 수 있는 최대 사용자 수 및 유료 전환 임계점",
-  "4) 손익분기점(BEP) — 월 구독가/단가 가정 및 필요 유료 고객 수",
+  "4) 손익분기점(BEP) — 단가/구독가 가정 및 필요 유료 고객 수",
   "5) 3단계 수익 시나리오 (보수적 / 기본 / 낙관적) 및 비용 절감 권고안",
 ].join("\n");
 
+async function gatherToolContext(
+  task: WorkspaceTaskRecord,
+  tools?: OrchestrationToolContext
+): Promise<string> {
+  const sections: string[] = [];
+
+  if (tools?.attachment) {
+    const kb = Math.max(1, Math.round(tools.attachment.sizeBytes / 1024));
+    addAgentLog({
+      taskId: task.id,
+      agentRole: "실무 도구",
+      stepTitle: `첨부 파일 연동 (${tools.attachment.name})`,
+      content: `파일명: ${tools.attachment.name}\n형식: ${tools.attachment.mimeType}\n크기: 약 ${kb}KB\n상태: 6인 AI 팀 분석 입력에 직접 첨부 완료`,
+    });
+    sections.push(
+      `[첨부 파일 정보] ${tools.attachment.name} (${tools.attachment.mimeType}, ${kb}KB)`
+    );
+  }
+
+  const urls = tools?.referenceUrls ?? task.referenceUrls;
+  if (urls && urls.length > 0) {
+    const fetched = await fetchReferenceUrls(urls);
+    const summaryLog = fetched
+      .map((item, idx) =>
+        item.error
+          ? `${idx + 1}. ${item.url}\n   - 상태: 실패 (${item.error})`
+          : `${idx + 1}. ${item.url}\n   - 제목: ${item.title}\n   - 추출 분량: ${item.excerpt.length}자`
+      )
+      .join("\n");
+
+    addAgentLog({
+      taskId: task.id,
+      agentRole: "실무 도구",
+      stepTitle: `참고 URL 실시간 분석 (${fetched.length}건)`,
+      content: summaryLog,
+    });
+
+    const successful = fetched.filter((item) => !item.error && item.excerpt);
+    if (successful.length > 0) {
+      sections.push(
+        successful
+          .map(
+            (item, idx) =>
+              `[참고 웹페이지 ${idx + 1}: ${item.title} (${item.url})]\n${item.excerpt}`
+          )
+          .join("\n\n")
+      );
+    }
+  }
+
+  return sections.join("\n\n");
+}
+
 async function runInitialDraft(
   ai: GoogleGenAI,
-  task: WorkspaceTaskRecord
+  task: WorkspaceTaskRecord,
+  toolContextText: string,
+  attachment?: UploadedAttachment | null
 ): Promise<{ draftReport: string; financeSummary: string; title: string }> {
+  const directiveHeader = [
+    `카테고리: ${task.category}`,
+    `대표자 업무 지시:\n${task.directive}`,
+    toolContextText ? `\n[실무 도구 수집 자료]\n${toolContextText}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   if (task.mode === "deep") {
-    // 1. Chief PM (High-tier leaderModel) decomposes work for 4 specialists
     const pmBreak = await ai.interactions.create({
       model: task.leaderModel,
       store: false,
       system_instruction:
-        "당신은 하이드어웨이 랩의 총괄 PM AI입니다. 대표자(신정우)의 지시를 분석하고 기획·개발·마케팅·재무 분석가 4명에게 전달할 구체적이고 충돌 없는 작업 지시서를 JSON으로 작성하세요.",
-      input: `대표자 업무 지시:\n${task.directive}`,
+        "당신은 하이드어웨이 랩(앱 개발 및 다양한 수익화 비즈니스 랩)의 총괄 PM AI입니다. 대표자(신정우)의 지시와 첨부·참고 자료를 분석하고 기획·개발·마케팅·재무 분석가 4명에게 전달할 구체적 작업 지시서를 JSON으로 작성하세요.",
+      input: buildModelInput(directiveHeader, attachment),
       response_format: {
         type: "text",
         mime_type: "application/json",
@@ -158,7 +282,10 @@ async function runInitialDraft(
             researchBrief: { type: "string", description: "기획·리서치 AI 지시사항" },
             engineeringBrief: { type: "string", description: "개발 AI 지시사항" },
             growthBrief: { type: "string", description: "마케팅·카피 AI 지시사항" },
-            financeBrief: { type: "string", description: "재무 분석가 AI 지시사항 (정확한 비용 산출 포인트 포함)" },
+            financeBrief: {
+              type: "string",
+              description: "재무 분석가 AI 지시사항 (정확한 비용 산출 포인트 포함)",
+            },
           },
           required: [
             "title",
@@ -195,13 +322,15 @@ async function runInitialDraft(
 
     await sleep(STEP_DELAY_MS);
 
-    // 2. Research & Product Agent (workerModel)
     const researchStep = await ai.interactions.create({
       model: task.workerModel,
       store: false,
       system_instruction:
-        "당신은 하이드어웨이 랩의 기획·리서치 AI입니다. 1인 AI 기업이 바로 실행할 수 있도록 시장 문제, 타깃 고객, 핵심 MVP 기능(PRD), 수익화 구조를 한국어 존댓말로 작성하세요.",
-      input: `원본 지시: ${task.directive}\n\nPM 지시사항: ${pmData.researchBrief}`,
+        "당신은 하이드어웨이 랩의 기획·리서치 AI입니다. 1인 AI 비즈니스 랩이 바로 실행할 수 있도록 시장 문제, 타깃 고객, 핵심 MVP/사업 구조, 수익화 모델을 마크다운으로 깔끔하게 작성하세요.",
+      input: buildModelInput(
+        `${directiveHeader}\n\nPM 지시사항: ${pmData.researchBrief}`,
+        attachment
+      ),
       generation_config: { max_output_tokens: 2048 },
     });
     const researchText =
@@ -209,19 +338,21 @@ async function runInitialDraft(
     addAgentLog({
       taskId: task.id,
       agentRole: "기획 · 리서치 AI",
-      stepTitle: `2단계 · 시장 리서치 및 PRD (${task.workerModel})`,
+      stepTitle: `2단계 · 시장 리서치 및 기획 (${task.workerModel})`,
       content: researchText,
     });
 
     await sleep(STEP_DELAY_MS);
 
-    // 3. Engineering Agent (workerModel)
     const engineeringStep = await ai.interactions.create({
       model: task.workerModel,
       store: false,
       system_instruction:
-        "당신은 하이드어웨이 랩의 개발 AI입니다. Next.js, TypeScript, 오라클 클라우드 무료 서버 등 1인 개발에 최적화된 기술 스택, DB 설계, 구현 일정, 외부 API 사용량 추정을 한국어 존댓말로 작성하세요.",
-      input: `원본 지시: ${task.directive}\n\nPM 지시사항: ${pmData.engineeringBrief}\n\n[기획 AI 산출물]\n${researchText}`,
+        "당신은 하이드어웨이 랩의 개발 AI입니다. Next.js, TypeScript, 오라클 클라우드 무료 서버 등 1인 실행에 최적화된 기술 스택, 구현/자동화 아키텍처, 일정 및 리스크를 마크다운으로 작성하세요.",
+      input: buildModelInput(
+        `${directiveHeader}\n\nPM 지시사항: ${pmData.engineeringBrief}\n\n[기획 AI 산출물]\n${researchText}`,
+        attachment
+      ),
       generation_config: { max_output_tokens: 2048 },
     });
     const engineeringText =
@@ -229,19 +360,18 @@ async function runInitialDraft(
     addAgentLog({
       taskId: task.id,
       agentRole: "개발 AI",
-      stepTitle: `3단계 · 기술 스택 및 구현 설계 (${task.workerModel})`,
+      stepTitle: `3단계 · 기술 스택 및 실행 설계 (${task.workerModel})`,
       content: engineeringText,
     });
 
     await sleep(STEP_DELAY_MS);
 
-    // 4. Growth & Copy Agent (workerModel)
     const growthStep = await ai.interactions.create({
       model: task.workerModel,
       store: false,
       system_instruction:
-        "당신은 하이드어웨이 랩의 마케팅·카피 AI입니다. 네이밍 후보, 핵심 슬로건, 랜딩 카피, 초기 고객 확보 전략 및 마케팅 예상 비용(0원 유기적 채널 vs 유료 광고)을 한국어 존댓말로 작성하세요.",
-      input: `원본 지시: ${task.directive}\n\nPM 지시사항: ${pmData.growthBrief}\n\n[기획 AI 산출물]\n${researchText}`,
+        "당신은 하이드어웨이 랩의 마케팅·카피 AI입니다. 네이밍 후보, 핵심 메시지, 랜딩/세일즈 카피, 0원으로 시작하는 초기 고객 확보 전략을 마크다운으로 작성하세요.",
+      input: `${directiveHeader}\n\nPM 지시사항: ${pmData.growthBrief}\n\n[기획 AI 산출물]\n${researchText}`,
       generation_config: { max_output_tokens: 2048 },
     });
     const growthText =
@@ -249,24 +379,26 @@ async function runInitialDraft(
     addAgentLog({
       taskId: task.id,
       agentRole: "마케팅 · 카피 AI",
-      stepTitle: `4단계 · 포지셔닝 및 런칭 카피 (${task.workerModel})`,
+      stepTitle: `4단계 · 포지셔닝 및 수익화 카피 (${task.workerModel})`,
       content: growthText,
     });
 
     await sleep(STEP_DELAY_MS);
 
-    // 5. Finance Analyst Agent (workerModel) — analyzes exact costs based on PRD + Eng + Growth
     const financeStep = await ai.interactions.create({
       model: task.workerModel,
       store: false,
-      system_instruction: `당신은 하이드어웨이 랩의 재무 분석가 AI입니다. 기획·개발·마케팅 계획을 모두 검토하여 이 프로젝트에 실제로 들어가는 비용과 수익성을 냉정하고 정확하게 계산해 보고하세요.\n\n${FINANCE_GUIDANCE}`,
-      input: [
-        `원본 지시: ${task.directive}`,
-        `\nPM 재무 지시사항: ${pmData.financeBrief}`,
-        `\n[기획 AI]\n${researchText}`,
-        `\n[개발 AI]\n${engineeringText}`,
-        `\n[마케팅 AI]\n${growthText}`,
-      ].join("\n"),
+      system_instruction: `당신은 하이드어웨이 랩의 재무 분석가 AI입니다. 기획·개발·마케팅 계획을 모두 검토하여 이 프로젝트에 실제로 들어가는 비용과 수익성을 냉정하고 정확하게 마크다운 표와 수치로 보고하세요.\n\n${FINANCE_GUIDANCE}`,
+      input: buildModelInput(
+        [
+          directiveHeader,
+          `\nPM 재무 지시사항: ${pmData.financeBrief}`,
+          `\n[기획 AI]\n${researchText}`,
+          `\n[개발 AI]\n${engineeringText}`,
+          `\n[마케팅 AI]\n${growthText}`,
+        ].join("\n"),
+        attachment
+      ),
       generation_config: { max_output_tokens: 2400 },
     });
     const financeText =
@@ -281,14 +413,13 @@ async function runInitialDraft(
 
     await sleep(STEP_DELAY_MS);
 
-    // 6. Chief PM (leaderModel) integrates all 4 specialist reports into Draft v1
     const pmDraft = await ai.interactions.create({
       model: task.leaderModel,
       store: false,
       system_instruction:
-        "당신은 하이드어웨이 랩의 총괄 PM AI입니다. 기획·개발·마케팅·재무 분석가 4명의 산출물을 모순 없이 통합해 대표자 보고서 초안을 작성하세요. 특히 재무 분석가의 비용·손익분기점 수치를 핵심 요약에 반드시 반영하세요.",
+        "당신은 하이드어웨이 랩의 총괄 PM AI입니다. 기획·개발·마케팅·재무 분석가 4명의 산출물을 모순 없이 통합해 마크다운 서식(제목, 표, 글머리표)으로 대표자 보고서 초안을 작성하세요. 재무 분석가의 핵심 비용·BEP 수치와 '지금 당장 실행할 액션 3가지'를 반드시 포함하세요.",
       input: [
-        `대표자 원본 지시:\n${task.directive}`,
+        directiveHeader,
         `\n[기획 · 리서치 AI]\n${researchText}`,
         `\n[개발 AI]\n${engineeringText}`,
         `\n[마케팅 · 카피 AI]\n${growthText}`,
@@ -309,44 +440,41 @@ async function runInitialDraft(
     return { draftReport, financeSummary: financeText, title: resolvedTitle };
   }
 
-  // FAST MODE: 1 structured worker call for 4 specialists + 1 leader PM synthesis call
+  // FAST MODE: 1 structured worker call (with multimodal attachment + URL context) + 1 leader PM synthesis
   const workersStep = await ai.interactions.create({
     model: task.workerModel,
     store: false,
     system_instruction: [
-      "당신은 하이드어웨이 랩(Hideaway Lab)의 실무 AI 4인 팀(기획·리서치 AI, 개발 AI, 마케팅·카피 AI, 재무 분석가 AI)입니다.",
-      "대표자(신정우)의 지시를 받아 각 담당자의 전문 산출물을 JSON 스키마로 한국어 존댓말로 작성하세요.",
+      "당신은 하이드어웨이 랩(앱 개발 및 다양한 수익화 비즈니스 랩)의 실무 AI 4인 팀(기획·리서치 AI, 개발 AI, 마케팅·카피 AI, 재무 분석가 AI)입니다.",
+      "대표자(신정우)의 지시와 첨부·참고 자료를 분석해 각 담당자의 전문 산출물을 마크다운 서식으로 정리하여 JSON 스키마로 작성하세요.",
       FINANCE_GUIDANCE,
     ].join("\n\n"),
-    input: `대표자 업무 지시:\n${task.directive}`,
+    input: buildModelInput(directiveHeader, attachment),
     response_format: {
       type: "text",
       mime_type: "application/json",
       schema: {
         type: "object",
         properties: {
-          title: {
-            type: "string",
-            description: "25자 이내 한국어 업무 제목",
-          },
+          title: { type: "string", description: "25자 이내 한국어 업무 제목" },
           researchOutput: {
             type: "string",
-            description: "기획·리서치 AI: 문제 정의, 타깃 고객, 핵심 MVP 기능",
+            description: "기획·리서치 AI: 문제 정의, 타깃 고객, 핵심 MVP/사업 모델",
           },
           engineeringOutput: {
             type: "string",
             description:
-              "개발 AI: 추천 기술 스택, DB/화면 구조, 구현 일정 및 리스크",
+              "개발 AI: 추천 기술 스택, 구현/자동화 구조, 일정 및 리스크",
           },
           growthOutput: {
             type: "string",
             description:
-              "마케팅·카피 AI: 서비스명 후보, 핵심 카피, 0원 초기 유입 전략",
+              "마케팅·카피 AI: 네이밍 후보, 핵심 카피, 0원 초기 유입 전략",
           },
           financeOutput: {
             type: "string",
             description:
-              "재무 분석가 AI: 초기 구축비, 월 고정/변동 운영비, 무료 티어 한계, 손익분기점(BEP), 3단계 수익 시나리오",
+              "재무 분석가 AI: 마크다운 표를 포함한 초기 구축비, 월 고정/변동 운영비, 무료 티어 한계, 손익분기점(BEP), 3단계 수익 시나리오",
           },
         },
         required: [
@@ -379,19 +507,19 @@ async function runInitialDraft(
   addAgentLog({
     taskId: task.id,
     agentRole: "기획 · 리서치 AI",
-    stepTitle: `기획 · MVP 설계 (${task.workerModel})`,
+    stepTitle: `기획 · 사업 구조 설계 (${task.workerModel})`,
     content: researchText,
   });
   addAgentLog({
     taskId: task.id,
     agentRole: "개발 AI",
-    stepTitle: `기술 아키텍처 설계 (${task.workerModel})`,
+    stepTitle: `기술 · 실행 설계 (${task.workerModel})`,
     content: engineeringText,
   });
   addAgentLog({
     taskId: task.id,
     agentRole: "마케팅 · 카피 AI",
-    stepTitle: `브랜딩 및 런칭 전략 (${task.workerModel})`,
+    stepTitle: `브랜딩 및 유입 전략 (${task.workerModel})`,
     content: growthText,
   });
   addAgentLog({
@@ -408,14 +536,13 @@ async function runInitialDraft(
 
   await sleep(STEP_DELAY_MS);
 
-  // Leader PM integrates worker outputs using high-performance leaderModel
   const pmStep = await ai.interactions.create({
     model: task.leaderModel,
     store: false,
     system_instruction:
-      "당신은 하이드어웨이 랩의 총괄 PM AI입니다. 실무 4인(기획·개발·마케팅·재무)의 결과를 종합해 모순을 정리하고, 대표자 결재용 통합 보고서 초안을 한국어 존댓말로 작성하세요. 재무 분석의 핵심 비용·BEP 수치와 '지금 당장 실행할 액션 3가지'를 반드시 포함하세요.",
+      "당신은 하이드어웨이 랩의 총괄 PM AI입니다. 실무 4인(기획·개발·마케팅·재무)의 결과를 종합해 모순을 정리하고, 마크다운 서식(제목, 요약 표, 글머리표)으로 대표자 결재용 통합 보고서 초안을 작성하세요. 재무 분석의 핵심 비용·BEP 수치와 '지금 당장 실행할 액션 3가지'를 반드시 포함하세요.",
     input: [
-      `대표자 원본 지시:\n${task.directive}`,
+      directiveHeader,
       `\n[기획 · 리서치 AI]\n${researchText}`,
       `\n[개발 AI]\n${engineeringText}`,
       `\n[마케팅 · 카피 AI]\n${growthText}`,
@@ -455,6 +582,7 @@ async function runReviewerCheck(
     ].join("\n"),
     input: [
       `[검수 라운드 ${round} / 최대 ${task.maxReviewRounds}]`,
+      `카테고리: ${task.category}`,
       `대표자 원본 지시:\n${task.directive}`,
       `\n[현재 통합 보고서]\n${currentReport}`,
       `\n[재무 분석가 보고]\n${financeSummary}`,
@@ -470,10 +598,7 @@ async function runReviewerCheck(
             enum: ["PASS", "REJECT"],
             description: "기준 충족 시 PASS, 보완·재토론 필요 시 REJECT",
           },
-          score: {
-            type: "integer",
-            description: "0~100점 사이 품질 점수",
-          },
+          score: { type: "integer", description: "0~100점 사이 품질 점수" },
           metCriteria: {
             type: "array",
             items: { type: "string" },
@@ -540,28 +665,28 @@ async function runReviewerCheck(
 
 function formatReviewerLog(review: ReviewerResult): string {
   const lines: string[] = [
-    `판정: ${review.verdict === "PASS" ? "✅ 통과 (PASS)" : "❌ 리젝 (REJECT)"} · 품질 점수: ${review.score} / 100점`,
+    `**판정**: ${review.verdict === "PASS" ? "✅ 통과 (PASS)" : "❌ 리젝 (REJECT)"} · **품질 점수**: ${review.score} / 100점`,
     "",
-    `[리뷰어 총평]\n${review.critique}`,
+    `### 리뷰어 총평\n${review.critique}`,
   ];
 
   if (review.metCriteria.length > 0) {
     lines.push(
       "",
-      `[충족된 항목]\n${review.metCriteria.map((item) => `- ${item}`).join("\n")}`
+      `### 충족된 항목\n${review.metCriteria.map((item) => `- ${item}`).join("\n")}`
     );
   }
   if (review.missingItems.length > 0) {
     lines.push(
       "",
-      `[보완 필요 항목]\n${review.missingItems.map((item) => `- ${item}`).join("\n")}`
+      `### 보완 필요 항목\n${review.missingItems.map((item) => `- ${item}`).join("\n")}`
     );
   }
   if (review.verdict === "REJECT" && review.debateTopic) {
-    lines.push("", `[재토론 소집 주제]\n${review.debateTopic}`);
+    lines.push("", `### 재토론 소집 주제\n${review.debateTopic}`);
   }
   if (review.verdict === "PASS" && review.approvalNote) {
-    lines.push("", `[대표자 전달 의견]\n${review.approvalNote}`);
+    lines.push("", `### 대표자 전달 의견\n${review.approvalNote}`);
   }
 
   return lines.join("\n");
@@ -576,14 +701,13 @@ async function runTeamDebateAndRevise(
   debateTopic: string,
   roundLabel: string
 ): Promise<{ revisedReport: string; updatedFinance: string }> {
-  // 1. Worker team debates the critique and reconciles product/tech/marketing/finance trade-offs
   const debateStep = await ai.interactions.create({
     model: task.workerModel,
     store: false,
     system_instruction: [
       "당신은 하이드어웨이 랩의 실무 AI 팀(기획·리서치 AI, 개발 AI, 마케팅·카피 AI, 재무 분석가 AI) 내부 토론 진행자입니다.",
       "품질 리뷰어(또는 대표자)의 지적 사항을 바탕으로 각 담당자가 서로 반론·제안·타협하며 최선의 개선안을 합의하는 회의록을 JSON으로 작성하세요.",
-      "비용이나 수익 구조에 변화가 생기면 재무 분석가 AI가 업데이트된 정밀 비용·손익 요약을 반드시 갱신하세요.",
+      "비용이나 수익 구조에 변화가 생기면 재무 분석가 AI가 업데이트된 정밀 비용·손익 요약을 마크다운 표로 반드시 갱신하세요.",
     ].join("\n"),
     input: [
       `대표자 원본 지시:\n${task.directive}`,
@@ -625,7 +749,7 @@ async function runTeamDebateAndRevise(
 
   const debateData = parseJsonSafe<DebateResult>(debateStep.output_text ?? "");
   const debateText = debateData
-    ? `${debateData.debateTranscript}\n\n[팀 합의 수정안]\n${debateData.agreedChanges}`
+    ? `${debateData.debateTranscript}\n\n### 팀 합의 수정안\n${debateData.agreedChanges}`
     : debateStep.output_text?.trim() || "팀 재토론 완료";
   const updatedFinance =
     debateData?.updatedFinanceSummary?.trim() || financeSummary;
@@ -641,12 +765,11 @@ async function runTeamDebateAndRevise(
 
   await sleep(STEP_DELAY_MS);
 
-  // 2. Chief PM (leaderModel) integrates the debate consensus into an upgraded report
   const pmRevise = await ai.interactions.create({
     model: task.leaderModel,
     store: false,
     system_instruction:
-      "당신은 하이드어웨이 랩의 총괄 PM AI입니다. 리뷰어의 지적과 AI 팀 재토론에서 합의된 수정안, 갱신된 재무 수치를 완벽히 반영하여 한 단계 높아진 개정 보고서를 한국어 존댓말로 작성하세요. 상단에 '이번 라운드에서 개선된 핵심 사항'을 간략히 적어주세요.",
+      "당신은 하이드어웨이 랩의 총괄 PM AI입니다. 리뷰어의 지적과 AI 팀 재토론에서 합의된 수정안, 갱신된 재무 수치를 완벽히 반영하여 마크다운 서식으로 한 단계 높아진 개정 보고서를 작성하세요. 상단에 '이번 라운드에서 개선된 핵심 사항'을 적어주세요.",
     input: [
       `대표자 원본 지시:\n${task.directive}`,
       `\n[이전 보고서]\n${currentReport}`,
@@ -657,8 +780,7 @@ async function runTeamDebateAndRevise(
     generation_config: { max_output_tokens: 3072 },
   });
 
-  const revisedReport =
-    pmRevise.output_text?.trim() || currentReport;
+  const revisedReport = pmRevise.output_text?.trim() || currentReport;
 
   addAgentLog({
     taskId: task.id,
@@ -683,7 +805,7 @@ async function conveneEmergencyMeeting(
     system_instruction: [
       "당신은 하이드어웨이 랩의 품질 리뷰어 AI입니다.",
       "AI 팀과 여러 차례 재토론을 진행했지만 아직 대표자(신정우)의 이상적인 기준을 100% 충족하지 못했거나, 기능·일정·비용 사이에 대표자의 결단이 필요한 트레이드오프가 남아 있어 긴급 회의를 소집했습니다.",
-      "대표님께 아래 4가지를 명료하게 보고하고 승인 여부를 정중히 여쭤보세요:",
+      "대표님께 아래 4가지를 마크다운으로 명료하게 보고하고 승인 여부를 정중히 여쭤보세요:",
       "1) 현재 도달 수준 요약 (점수 및 잘된 점)",
       "2) AI 팀끼리 끝내 해소하지 못한 핵심 쟁점 / 한계",
       "3) 대표님께 제안하는 현실적 선택지 2~3안 (각 안의 장단점과 예상 비용 차이)",
@@ -707,7 +829,8 @@ async function conveneEmergencyMeeting(
 }
 
 export async function runTaskOrchestration(
-  taskId: string
+  taskId: string,
+  tools?: OrchestrationToolContext
 ): Promise<WorkspaceTaskRecord> {
   const task = getTaskWithLogs(taskId);
   if (!task) {
@@ -717,8 +840,16 @@ export async function runTaskOrchestration(
   try {
     const ai = getClient();
 
+    // Gather real-world tool inputs (URL fetch + multimodal file metadata)
+    const toolContextText = await gatherToolContext(task, tools);
+
     // Phase A: Initial 6-agent production (4 workers + PM synthesis)
-    const initial = await runInitialDraft(ai, task);
+    const initial = await runInitialDraft(
+      ai,
+      task,
+      toolContextText,
+      tools?.attachment
+    );
     let currentReport = initial.draftReport;
     let currentFinance = initial.financeSummary;
 
@@ -774,7 +905,6 @@ export async function runTaskOrchestration(
         currentReport = debated.revisedReport;
         currentFinance = debated.updatedFinance;
       } else {
-        // Max rounds reached without PASS -> Reviewer convenes Emergency Meeting & summons CEO
         await sleep(STEP_DELAY_MS);
         const agenda = await conveneEmergencyMeeting(
           ai,
@@ -944,7 +1074,7 @@ export async function reviseTaskWithFeedback(
       model: task.leaderModel,
       store: false,
       system_instruction:
-        "당신은 하이드어웨이 랩의 총괄 PM AI입니다. 대표자(신정우)의 직접 수정 지시를 정확히 반영해 기존 보고서와 재무 수치를 보완한 수정 최종 보고서를 한국어 존댓말로 작성하세요. 맨 위에 '반영된 수정 사항 요약'을 먼저 적어주세요.",
+        "당신은 하이드어웨이 랩의 총괄 PM AI입니다. 대표자(신정우)의 직접 수정 지시를 정확히 반영해 기존 보고서와 재무 수치를 보완한 수정 최종 보고서를 마크다운 서식으로 작성하세요. 맨 위에 '반영된 수정 사항 요약'을 먼저 적어주세요.",
       input: [
         `원본 업무 지시:\n${task.directive}`,
         `\n기존 최종 보고서:\n${task.finalReport ?? "(없음)"}`,

@@ -10,6 +10,20 @@ export type LeaderModelId =
 export type WorkerModelId = "gemini-3.5-flash-lite" | "gemini-4-hydrogen";
 export type ReviewVerdict = "PASS" | "REJECT" | "MEETING";
 export type TaskStatus = "진행 중" | "승인 대기" | "회의 소집" | "완료" | "오류";
+export type TaskCategory =
+  | "앱 · 서비스 개발"
+  | "신규 수익화 · 사업"
+  | "마케팅 · 콘텐츠"
+  | "재무 · 운영"
+  | "기타";
+
+export const TASK_CATEGORIES: readonly TaskCategory[] = [
+  "앱 · 서비스 개발",
+  "신규 수익화 · 사업",
+  "마케팅 · 콘텐츠",
+  "재무 · 운영",
+  "기타",
+] as const;
 
 export type AgentRoleName =
   | "총괄 PM AI"
@@ -19,6 +33,7 @@ export type AgentRoleName =
   | "개발 AI"
   | "마케팅 · 카피 AI"
   | "AI 팀 토론"
+  | "실무 도구"
   | "대표자";
 
 export interface AgentLogRecord {
@@ -33,6 +48,7 @@ export interface AgentLogRecord {
 export interface WorkspaceTaskRecord {
   id: string;
   title: string;
+  category: TaskCategory;
   directive: string;
   mode: TaskMode;
   model: string;
@@ -42,6 +58,9 @@ export interface WorkspaceTaskRecord {
   reviewRounds: number;
   reviewScore: number | null;
   reviewVerdict: ReviewVerdict | null;
+  referenceUrls: string[];
+  attachmentName: string | null;
+  attachmentMime: string | null;
   status: TaskStatus;
   finalReport: string | null;
   financeSummary: string | null;
@@ -56,6 +75,7 @@ export interface WorkspaceTaskRecord {
 interface RawTaskRow {
   id: string;
   title: string;
+  category: string | null;
   directive: string;
   mode: string;
   model: string;
@@ -65,6 +85,9 @@ interface RawTaskRow {
   review_rounds: number | null;
   review_score: number | null;
   review_verdict: string | null;
+  reference_urls: string | null;
+  attachment_name: string | null;
+  attachment_mime: string | null;
   status: string;
   final_report: string | null;
   finance_summary: string | null;
@@ -94,6 +117,10 @@ function ensureTaskColumns(db: DatabaseSync): void {
 
   const migrations: Array<{ name: string; sql: string }> = [
     {
+      name: "category",
+      sql: "ALTER TABLE tasks ADD COLUMN category TEXT NOT NULL DEFAULT '앱 · 서비스 개발'",
+    },
+    {
       name: "leader_model",
       sql: "ALTER TABLE tasks ADD COLUMN leader_model TEXT NOT NULL DEFAULT 'gemini-4-hydrogen'",
     },
@@ -116,6 +143,18 @@ function ensureTaskColumns(db: DatabaseSync): void {
     {
       name: "review_verdict",
       sql: "ALTER TABLE tasks ADD COLUMN review_verdict TEXT",
+    },
+    {
+      name: "reference_urls",
+      sql: "ALTER TABLE tasks ADD COLUMN reference_urls TEXT",
+    },
+    {
+      name: "attachment_name",
+      sql: "ALTER TABLE tasks ADD COLUMN attachment_name TEXT",
+    },
+    {
+      name: "attachment_mime",
+      sql: "ALTER TABLE tasks ADD COLUMN attachment_mime TEXT",
     },
     {
       name: "finance_summary",
@@ -151,6 +190,7 @@ function getDb(): DatabaseSync {
     CREATE TABLE IF NOT EXISTS tasks (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT '앱 · 서비스 개발',
       directive TEXT NOT NULL,
       mode TEXT NOT NULL,
       model TEXT NOT NULL,
@@ -160,6 +200,9 @@ function getDb(): DatabaseSync {
       review_rounds INTEGER NOT NULL DEFAULT 0,
       review_score INTEGER,
       review_verdict TEXT,
+      reference_urls TEXT,
+      attachment_name TEXT,
+      attachment_mime TEXT,
       status TEXT NOT NULL,
       final_report TEXT,
       finance_summary TEXT,
@@ -190,6 +233,18 @@ function getDb(): DatabaseSync {
   return db;
 }
 
+function parseReferenceUrls(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.filter((v): v is string => typeof v === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 function mapLogRow(row: RawLogRow): AgentLogRecord {
   return {
     id: row.id,
@@ -205,9 +260,14 @@ function mapTaskRow(
   row: RawTaskRow,
   logs: AgentLogRecord[]
 ): WorkspaceTaskRecord {
+  const category = TASK_CATEGORIES.includes(row.category as TaskCategory)
+    ? (row.category as TaskCategory)
+    : "앱 · 서비스 개발";
+
   return {
     id: row.id,
     title: row.title,
+    category,
     directive: row.directive,
     mode: row.mode as TaskMode,
     model: row.model,
@@ -217,6 +277,9 @@ function mapTaskRow(
     reviewRounds: row.review_rounds ?? 0,
     reviewScore: row.review_score ?? null,
     reviewVerdict: (row.review_verdict as ReviewVerdict | null) ?? null,
+    referenceUrls: parseReferenceUrls(row.reference_urls),
+    attachmentName: row.attachment_name ?? null,
+    attachmentMime: row.attachment_mime ?? null,
     status: row.status as TaskStatus,
     finalReport: row.final_report,
     financeSummary: row.finance_summary ?? null,
@@ -292,10 +355,14 @@ export function getTaskWithLogs(id: string): WorkspaceTaskRecord | null {
 
 export function createTask(params: {
   directive: string;
+  category: TaskCategory;
   mode: TaskMode;
   leaderModel: LeaderModelId;
   workerModel: WorkerModelId;
   maxReviewRounds: number;
+  referenceUrls?: string[];
+  attachmentName?: string | null;
+  attachmentMime?: string | null;
 }): WorkspaceTaskRecord {
   const db = getDb();
   const id = generateTaskId(db);
@@ -307,19 +374,26 @@ export function createTask(params: {
 
   db.prepare(
     `INSERT INTO tasks (
-      id, title, directive, mode, model,
+      id, title, category, directive, mode, model,
       leader_model, worker_model, max_review_rounds,
-      review_rounds, status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`
+      review_rounds, reference_urls, attachment_name, attachment_mime,
+      status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     initialTitle,
+    params.category,
     params.directive,
     params.mode,
     `${params.leaderModel} / ${params.workerModel}`,
     params.leaderModel,
     params.workerModel,
     params.maxReviewRounds,
+    params.referenceUrls && params.referenceUrls.length > 0
+      ? JSON.stringify(params.referenceUrls)
+      : null,
+    params.attachmentName ?? null,
+    params.attachmentMime ?? null,
     "진행 중",
     now,
     now

@@ -51,3 +51,27 @@ body {
   background: rgba(16, 185, 129, 0.28);
   color: #ffffff;
 }
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-report {
+    border: none !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .print-report * {
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+  }
+}

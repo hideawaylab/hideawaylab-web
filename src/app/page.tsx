@@ -59,21 +59,21 @@ export default function HomePage() {
               <div className="space-y-7">
                 <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-medium text-emerald-300">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  <span>AI-NATIVE INDEPENDENT STUDIO · HIDEAWAYLAB.KR</span>
+                  <span>AI-NATIVE VENTURE STUDIO · HIDEAWAYLAB.KR</span>
                 </div>
 
-                <h1 className="text-4xl font-bold leading-[1.16] tracking-tight text-white sm:text-5xl lg:text-[54px]">
-                  작은 팀의 집중력으로,
+                <h1 className="break-keep text-4xl font-bold leading-[1.18] tracking-tight text-white sm:text-5xl lg:text-[52px]">
+                  아이디어에서 수익까지,
                   <br />
                   <span className="bg-gradient-to-r from-emerald-300 via-teal-200 to-sky-300 bg-clip-text text-transparent">
-                    AI와 함께 만드는 실용적인 앱
+                    AI와 함께 기획하고 실행하는 비즈니스 랩
                   </span>
                 </h1>
 
-                <p className="max-w-xl text-base leading-relaxed text-zinc-400 sm:text-lg">
-                  하이드어웨이 랩(Hideaway Lab)은 대표자와 전문 AI 에이전트 팀이
-                  유기적으로 협업하여 기획·개발·출시까지 완주하는 독립 AI 제품
-                  스튜디오입니다.
+                <p className="max-w-xl break-keep text-base leading-relaxed text-zinc-400 sm:text-lg">
+                  하이드어웨이 랩(Hideaway Lab)은 앱·소프트웨어 개발을 주력으로,
+                  다양한 수익화 프로젝트와 디지털 비즈니스를 대표자와 6인의 전문
+                  AI 조직이 함께 기획·검증·실행하는 독립 AI 비즈니스 랩입니다.
                 </p>
 
                 <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -200,12 +200,13 @@ export default function HomePage() {
                 <p className="font-mono text-xs uppercase tracking-widest text-emerald-400">
                   About Hideaway Lab
                 </p>
-                <h2 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                  혼자 일하지만, 팀처럼 움직이는 스튜디오
+                <h2 className="mt-3 break-keep text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                  앱 개발을 넘어, 다양한 수익화 프로젝트를 실행하는 AI 랩
                 </h2>
-                <p className="mt-3 text-sm leading-relaxed text-zinc-400 sm:text-base">
-                  불필요한 회의와 복잡한 조직 대신, 명확한 문제 정의와 AI 에이전트
-                  협업으로 빠르게 만들고 직접 검증합니다.
+                <p className="mt-3 break-keep text-sm leading-relaxed text-zinc-400 sm:text-base">
+                  단순한 외주나 단일 앱 제작에 머무르지 않고, AI 조직의 빠른
+                  실행력과 철저한 재무 검증을 결합해 여러 비즈니스 기회를 직접
+                  실험하고 사업화합니다.
                 </p>
               </div>
 
@@ -213,18 +214,18 @@ export default function HomePage() {
                 {[
                   {
                     icon: Workflow,
-                    title: "AI 협업 파이프라인",
-                    desc: "기획, 개발, 마케팅 역할을 분리한 멀티 에이전트 구조로 1인 기업에서도 체계적인 제품 제작 흐름을 운영합니다.",
+                    title: "6인 AI 조직 기반 실행",
+                    desc: "총괄 PM·품질 리뷰어·재무·기획·개발·마케팅 AI가 서로 토론하고 검증하며 아이디어에서 실행까지의 속도를 극대화합니다.",
                   },
                   {
                     icon: ShieldCheck,
-                    title: "대표자 책임 검수",
-                    desc: "모든 자동화 단계의 핵심 의사결정과 배포 전 품질 확인은 대표가 직접 승인(Human-in-the-Loop)하는 원칙을 지킵니다.",
+                    title: "재무 검증 & 대표 책임 결재",
+                    desc: "모든 프로젝트는 재무 분석가 AI의 비용·손익 시뮬레이션과 품질 리뷰어 검수를 거쳐 대표자가 최종 승인하는 원칙을 지킵니다.",
                   },
                   {
                     icon: Layers,
-                    title: "작고 단단한 실용 앱",
-                    desc: "화려하지만 쓰지 않는 기능보다, 매일의 업무와 생활에서 실제로 시간을 아껴주는 직관적인 소프트웨어에 집중합니다.",
+                    title: "앱 주력 · 다각화된 수익 실험",
+                    desc: "실용 소프트웨어와 앱 개발을 중심에 두되, 자동화 도구·마이크로 SaaS·디지털 비즈니스까지 폭넓은 수익 모델을 실행합니다.",
                   },
                 ].map((pillar) => {
                   const Icon = pillar.icon;
@@ -257,12 +258,12 @@ export default function HomePage() {
                   <p className="font-mono text-xs uppercase tracking-widest text-emerald-400">
                     Portfolio &amp; Lab
                   </p>
-                  <h2 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                    만들고 있는 프로젝트
+                  <h2 className="mt-3 break-keep text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                    기획하고 실행 중인 프로젝트
                   </h2>
-                  <p className="mt-2 text-sm text-zinc-400">
-                    하이드어웨이 랩에서 구축 중인 AI 플랫폼과 순차 출시될 자체 앱
-                    포트폴리오입니다.
+                  <p className="mt-2 break-keep text-sm text-zinc-400">
+                    하이드어웨이 랩의 AI 협업 플랫폼과 주력 앱, 그리고 다양한
+                    수익화 비즈니스 파이프라인입니다.
                   </p>
                 </div>
                 <span className="font-mono text-xs text-zinc-500">
@@ -467,12 +468,12 @@ export default function HomePage() {
                     <Mail className="h-4 w-4" />
                     <span>CONTACT &amp; COLLABORATION</span>
                   </div>
-                  <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                  <h2 className="break-keep text-2xl font-bold tracking-tight text-white sm:text-3xl">
                     하이드어웨이 랩과 함께할 이야기가 있나요?
                   </h2>
-                  <p className="text-sm leading-relaxed text-zinc-400">
-                    서비스 협업, 앱 제작 문의, 또는 제품 피드백은 언제든 이메일로
-                    연락해 주세요.
+                  <p className="break-keep text-sm leading-relaxed text-zinc-400">
+                    비즈니스 제휴, 앱·프로젝트 협업, 또는 서비스 피드백은 언제든
+                    이메일로 연락해 주세요.
                   </p>
                 </div>
 

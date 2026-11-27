@@ -17,10 +17,11 @@ export function Footer() {
                 <p className="text-xs text-zinc-400">{brand.nameKo}</p>
               </div>
             </div>
-            <p className="max-w-md text-sm leading-relaxed text-zinc-400">
+            <p className="max-w-md break-keep text-sm leading-relaxed text-zinc-400">
               {brand.tagline}
               <br />
-              독립적인 의사결정과 AI 에이전트 협업을 결합해 작고 단단한 디지털 제품을 만듭니다.
+              독립적인 의사결정과 6인 AI 조직 협업을 결합해 실행력 있는
+              비즈니스와 프로덕트를 만듭니다.
             </p>
             <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-zinc-500">
               <Link href="/#about" className="hover:text-zinc-300">

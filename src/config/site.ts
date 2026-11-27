@@ -25,7 +25,8 @@ export const siteConfig = {
     nameEn: "Hideaway Lab",
     domain: "hideawaylab.kr",
     url: "https://hideawaylab.kr",
-    tagline: "AI와 함께 일상을 바꾸는 실용적인 소프트웨어를 만듭니다.",
+    tagline:
+      "아이디어에서 수익까지, 앱 개발과 다양한 디지털 비즈니스를 AI 조직과 함께 기획하고 실행합니다.",
   },
   business: {
     companyName: "하이드어웨이 랩 (Hideaway Lab)",
@@ -50,22 +51,22 @@ export const siteConfig = {
     {
       id: "app-01",
       code: "APP · 01",
-      name: "First Utility App",
-      tagline: "첫 번째 자체 출시 실용 앱 (준비 중)",
+      name: "Flagship Utility App",
+      tagline: "주력 자체 소프트웨어 · 앱 프로젝트 (기획 중)",
       description:
-        "하이드어웨이 랩의 6인 AI 협업 파이프라인을 실전 투입해 기획·재무 검증·개발·마케팅까지 완주하는 첫 번째 독립 소프트웨어 프로젝트입니다.",
+        "하이드어웨이 랩의 6인 AI 협업 파이프라인을 실전 투입해 시장 조사·재무 검증·개발·런칭까지 완주하는 첫 번째 주력 앱 프로젝트입니다.",
       status: "기획 예정",
       tags: ["Web / Mobile", "AI Assistant", "Coming Soon"],
     },
     {
       id: "app-02",
-      code: "LAB · 02",
-      name: "Micro-SaaS Experiments",
-      tagline: "1인 사업자와 창작자를 위한 작은 도구들",
+      code: "BIZ · 02",
+      name: "Revenue & Business Experiments",
+      tagline: "마이크로 SaaS · 자동화 · 수익화 비즈니스 실험",
       description:
-        "현장의 반복적인 비효율을 빠르게 해결하는 경량 웹 서비스와 자동화 도구를 지속적으로 실험하고 공개할 예정입니다.",
+        "앱 개발을 넘어 현장의 문제를 해결하는 경량 웹 도구, 업무 자동화, 디지털 수익화 프로젝트를 유연하게 기획하고 실행합니다.",
       status: "로드맵",
-      tags: ["Automation", "Productivity", "SaaS"],
+      tags: ["Business Lab", "Micro-SaaS", "Monetization"],
     },
   ] as ProjectItem[],
   agents: [
