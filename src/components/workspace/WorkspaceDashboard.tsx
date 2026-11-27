@@ -4,7 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
+  Award,
+  BellRing,
   Bot,
+  Calculator,
   Check,
   CheckCircle2,
   Clock,
@@ -14,6 +17,7 @@ import {
   Loader2,
   LogOut,
   MessageSquarePlus,
+  MessagesSquare,
   RefreshCw,
   Send,
   ShieldCheck,
@@ -26,23 +30,33 @@ import { BrandMark } from "@/components/Navbar";
 import { logoutAction } from "@/app/workspace/actions";
 import type {
   AgentRoleName,
-  GeminiModelId,
+  LeaderModelId,
   TaskMode,
   TaskStatus,
+  WorkerModelId,
   WorkspaceTaskRecord,
 } from "@/lib/db";
 
 const previewTasks: WorkspaceTaskRecord[] = [
   {
     id: "DEMO-001",
-    title: "1인 사업자용 영수증 정리 앱 MVP 기획",
+    title: "1인 사업자용 영수증 정리 앱 MVP 기획 및 비용 검증",
     directive:
-      "1인 사업자용 영수증 정리 앱 기획서 작성하고 MVP 기능과 초기 마케팅 전략 잡아줘",
+      "1인 사업자용 영수증 정리 앱 기획서 작성하고 초기·월 운영 비용과 손익분기점까지 정확히 분석해 줘",
     mode: "fast",
-    model: "gemini-3.5-flash-lite",
+    model: "gemini-4-hydrogen / gemini-3.5-flash-lite",
+    leaderModel: "gemini-4-hydrogen",
+    workerModel: "gemini-3.5-flash-lite",
+    maxReviewRounds: 2,
+    reviewRounds: 2,
+    reviewScore: 91,
+    reviewVerdict: "PASS",
     status: "승인 대기",
     finalReport:
-      "## 핵심 결론\n1인 사업자가 영수증 사진을 찍어 올리면 자동으로 항목·부가세·경비 분류 후 엑셀로 내보내는 초경량 웹앱을 2주 MVP로 출시하는 전략을 추천합니다.\n\n## 당장 실행할 다음 액션 3가지\n1. 핵심 기능 3개(사진 업로드, OCR 자동 분류, CSV 다운로드)만 포함한 프로토타입 제작\n2. 세무 신고 시즌(5월·1월) 키워드 중심 랜딩 페이지 공개\n3. 초기 1인 사업자 10명 무료 베타 테스트 후 월 4,900원 구독 모델 검증",
+      "## 핵심 결론 (리뷰어 91점 통과)\n1인 사업자가 영수증 사진을 올리면 Gemini 멀티모달로 항목·부가세를 자동 분류하고 엑셀로 내보내는 초경량 웹앱을 2주 MVP로 출시합니다.\n\n## 핵심 재무 요약\n- 초기 구축비: 12,650원 (도메인 1년 기준, 오라클 무료 서버 활용 시 인프라 0원)\n- 월 운영비: 초기 200명까지 0원(무료 티어), 유료 전환 후 월 3~5만 원 수준\n- 손익분기점(BEP): 월 4,900원 구독 기준 유료 고객 12명 확보 시 흑자 전환\n\n## 당장 실행할 다음 액션 3가지\n1. 사진 업로드 → 자동 분류 → CSV 다운로드 3개 핵심 기능만 구현\n2. 세무 신고 시즌 키워드 중심 랜딩 페이지 공개\n3. 1인 사업자 15명 무료 베타 테스트 후 결제 전환율 검증",
+    financeSummary:
+      "1) 초기 구축 비용: 약 12,650원 (서브도메인 활용 시 0원)\n2) 월 고정·변동 운영비:\n   - 서버(Oracle Always Free ARM): 0원\n   - Gemini API(월 1,000명 × 영수증 20장 기준): 무료 티어 0원 / 유료 전환 시 약 25,000원\n   - 결제 수수료(PG 약 3.3%): 매출 비례 변동비\n3) 손익분기점(BEP): 월 4,900원 요금제 기준 유료 구독자 12명\n4) 수익 시나리오:\n   - 보수적(유료 30명): 월 순이익 약 11만 원\n   - 기본(유료 120명): 월 순이익 약 51만 원\n   - 낙관적(유료 400명): 월 순이익 약 178만 원",
+    meetingAgenda: null,
     ceoFeedback: null,
     errorMessage: null,
     createdAt: new Date().toISOString(),
@@ -51,37 +65,37 @@ const previewTasks: WorkspaceTaskRecord[] = [
       {
         id: 1,
         taskId: "DEMO-001",
-        agentRole: "총괄 PM AI",
-        stepTitle: "목표 분석 및 업무 분해",
+        agentRole: "재무 분석가 AI",
+        stepTitle: "정밀 비용 및 손익 분석 (gemini-3.5-flash-lite)",
         content:
-          "1인 사업자 세무 정리의 가장 큰 병목인 '영수증 수기 입력' 해결에 집중하여 2주 내 출시 가능한 MVP 범위로 기획·개발·마케팅 업무를 분배했습니다.",
+          "오라클 무료 서버와 Gemini Flash-Lite 기준 월 200명까지 0원 운영 가능하며, 유료 12명부터 손익분기점을 넘깁니다.",
         createdAt: new Date().toISOString(),
       },
       {
         id: 2,
         taskId: "DEMO-001",
-        agentRole: "기획 · 리서치 AI",
-        stepTitle: "시장 분석 및 MVP 기획",
+        agentRole: "품질 리뷰어 AI",
+        stepTitle: "검수 라운드 1 · 리젝 (76점) (gemini-4-hydrogen)",
         content:
-          "기존 회계 프로그램은 기능이 과도하게 복잡합니다. 스마트폰 촬영 → 자동 분류 → 월별 합계 확인의 3단계 흐름에 집중하면 높은 재사용률을 기대할 수 있습니다.",
+          "판정: ❌ 리젝 (REJECT) · 76/100점\n초기 MVP에 모바일 앱 개발까지 포함되어 있어 1인 개발 일정과 스토어 비용이 과다합니다. 웹앱(PWA) 우선 전략으로 재토론하세요.",
         createdAt: new Date().toISOString(),
       },
       {
         id: 3,
         taskId: "DEMO-001",
-        agentRole: "개발 AI",
-        stepTitle: "기술 아키텍처 및 구현 설계",
+        agentRole: "AI 팀 토론",
+        stepTitle: "재토론 라운드 1 · 실무 4인 재토론 (gemini-3.5-flash-lite)",
         content:
-          "Next.js + Gemini 멀티모달 영수증 파싱 + 오라클 서버 SQLite 조합으로 서버비 0원 MVP 구현이 가능합니다.",
+          "개발 AI와 재무 분석가 AI가 협의하여 네이티브 앱 대신 모바일 웹(PWA)으로 전환하기로 합의했고, 초기 비용을 15만 원에서 0~1.2만 원으로 절감했습니다.",
         createdAt: new Date().toISOString(),
       },
       {
         id: 4,
         taskId: "DEMO-001",
-        agentRole: "마케팅 · 카피 AI",
-        stepTitle: "브랜딩 카피 및 초기 성장 전략",
+        agentRole: "품질 리뷰어 AI",
+        stepTitle: "검수 라운드 2 · 통과 (91점) (gemini-4-hydrogen)",
         content:
-          "슬로건 제안: '영수증 사진 한 장으로 끝내는 1인 사업자 경비 정리'. 네이버 블로그·스레드·1인 창업 커뮤니티 중심으로 초기 사용자를 확보합니다.",
+          "판정: ✅ 통과 (PASS) · 91/100점\n비용 절감과 2주 MVP 실행력이 모두 충족되었습니다. 대표님 최종 승인을 추천합니다.",
         createdAt: new Date().toISOString(),
       },
     ],
@@ -90,9 +104,12 @@ const previewTasks: WorkspaceTaskRecord[] = [
 
 const roleBadgeStyles: Record<AgentRoleName, string> = {
   "총괄 PM AI": "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
+  "품질 리뷰어 AI": "border-rose-400/30 bg-rose-500/10 text-rose-300",
+  "재무 분석가 AI": "border-cyan-400/30 bg-cyan-500/10 text-cyan-300",
   "기획 · 리서치 AI": "border-sky-400/30 bg-sky-500/10 text-sky-300",
   "개발 AI": "border-amber-400/30 bg-amber-500/10 text-amber-300",
   "마케팅 · 카피 AI": "border-violet-400/30 bg-violet-500/10 text-violet-300",
+  "AI 팀 토론": "border-orange-400/30 bg-orange-500/10 text-orange-200",
   대표자: "border-white/25 bg-white/10 text-white",
 };
 
@@ -119,17 +136,25 @@ export function WorkspaceDashboard({
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(
     (isAuthenticated ? initialTasks : previewTasks)[0]?.id ?? null
   );
-  const [activeTab, setActiveTab] = useState<"report" | "logs">("report");
+  const [activeTab, setActiveTab] = useState<"report" | "finance" | "logs">(
+    "report"
+  );
 
   const [directive, setDirective] = useState("");
   const [collabMode, setCollabMode] = useState<TaskMode>("fast");
-  const [model, setModel] = useState<GeminiModelId>("gemini-3.5-flash-lite");
+  const [leaderModel, setLeaderModel] =
+    useState<LeaderModelId>("gemini-4-hydrogen");
+  const [workerModel, setWorkerModel] = useState<WorkerModelId>(
+    "gemini-3.5-flash-lite"
+  );
+  const [maxReviewRounds, setMaxReviewRounds] = useState<number>(2);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const [revisionText, setRevisionText] = useState("");
+  const [meetingGuidance, setMeetingGuidance] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const selectedTask =
@@ -159,10 +184,19 @@ export function WorkspaceDashboard({
         title: trimmed.length > 36 ? `${trimmed.slice(0, 36)}…` : trimmed,
         directive: trimmed,
         mode: collabMode,
-        model,
+        model: `${leaderModel} / ${workerModel}`,
+        leaderModel,
+        workerModel,
+        maxReviewRounds,
+        reviewRounds: 1,
+        reviewScore: 88,
+        reviewVerdict: "PASS",
         status: "승인 대기",
         finalReport:
-          "미리보기 모드에서는 실제 Gemini API를 호출하지 않습니다.\n대표자 계정으로 로그인하시면 총괄 PM·기획·개발·마케팅 AI가 실제 협업 보고서를 생성하고 서버 DB에 영구 저장합니다.",
+          "미리보기 모드에서는 실제 Gemini API를 호출하지 않습니다.\n대표자 계정으로 로그인하시면 6인 AI 팀(총괄 PM·품질 리뷰어·재무 분석가·기획·개발·마케팅)이 실제 협업·재토론·긴급 회의 소집까지 수행하고 서버 DB에 영구 저장합니다.",
+        financeSummary:
+          "로그인 후 실제 실행 시 재무 분석가 AI가 초기 구축비, 월 운영비, 손익분기점(BEP)을 정밀 계산해 표시합니다.",
+        meetingAgenda: null,
         ceoFeedback: null,
         errorMessage: null,
         createdAt: now,
@@ -192,7 +226,9 @@ export function WorkspaceDashboard({
         body: JSON.stringify({
           directive: trimmed,
           mode: collabMode,
-          model,
+          leaderModel,
+          workerModel,
+          maxReviewRounds,
         }),
       });
       const data = (await res.json()) as {
@@ -220,7 +256,12 @@ export function WorkspaceDashboard({
       setTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
-            ? { ...t, status: "완료", ceoFeedback: "대표자 승인 완료 (미리보기)" }
+            ? {
+                ...t,
+                status: "완료",
+                meetingAgenda: null,
+                ceoFeedback: "대표자 승인 완료 (미리보기)",
+              }
             : t
         )
       );
@@ -245,6 +286,37 @@ export function WorkspaceDashboard({
       upsertTask(data.task);
     } catch {
       setActionError("승인 요청 중 네트워크 오류가 발생했습니다.");
+    } finally {
+      setBusyTaskId(null);
+    }
+  }
+
+  async function handleGuidedDebate(e: React.FormEvent, taskId: string) {
+    e.preventDefault();
+    const trimmed = meetingGuidance.trim();
+    if (!trimmed || !isAuthenticated) return;
+    setActionError(null);
+    setBusyTaskId(taskId);
+
+    try {
+      const res = await fetch(`/api/workspace/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "debate", feedback: trimmed }),
+      });
+      const data = (await res.json()) as {
+        task?: WorkspaceTaskRecord;
+        error?: string;
+      };
+      if (!res.ok || !data.task) {
+        setActionError(data.error ?? "추가 토론 실행에 실패했습니다.");
+        return;
+      }
+      upsertTask(data.task);
+      setMeetingGuidance("");
+      setActiveTab("logs");
+    } catch {
+      setActionError("추가 토론 요청 중 네트워크 오류가 발생했습니다.");
     } finally {
       setBusyTaskId(null);
     }
@@ -371,9 +443,13 @@ export function WorkspaceDashboard({
   }
 
   async function handleCopyReport(task: WorkspaceTaskRecord) {
-    if (!task.finalReport) return;
+    const contentToCopy =
+      activeTab === "finance" && task.financeSummary
+        ? task.financeSummary
+        : task.finalReport;
+    if (!contentToCopy) return;
     try {
-      await navigator.clipboard.writeText(task.finalReport);
+      await navigator.clipboard.writeText(contentToCopy);
       setCopiedId(task.id);
       setTimeout(() => setCopiedId(null), 2000);
     } catch {
@@ -397,6 +473,7 @@ export function WorkspaceDashboard({
   const statusCounts: Record<"전체" | TaskStatus, number> = {
     전체: tasks.length,
     "진행 중": tasks.filter((t) => t.status === "진행 중").length,
+    "회의 소집": tasks.filter((t) => t.status === "회의 소집").length,
     "승인 대기": tasks.filter((t) => t.status === "승인 대기").length,
     완료: tasks.filter((t) => t.status === "완료").length,
     오류: tasks.filter((t) => t.status === "오류").length,
@@ -426,8 +503,8 @@ export function WorkspaceDashboard({
               </div>
               <p className="text-[11px] text-zinc-500">
                 {isAuthenticated
-                  ? `${ceoEmail ?? "CEO"} · Gemini AI 협업 엔진 + SQLite 영구 저장`
-                  : "공개 UI 미리보기 (실제 AI 실행은 대표자 로그인 후 가능)"}
+                  ? `${ceoEmail ?? "CEO"} · 6인 AI 조직 (리뷰어 · 재무 분석 · 긴급 회의)`
+                  : "공개 UI 미리보기 (실제 6인 AI 협업은 대표자 로그인 후 가능)"}
               </p>
             </div>
           </div>
@@ -474,9 +551,8 @@ export function WorkspaceDashboard({
               </p>
               <p className="mt-1 text-amber-200/80">
                 오라클 서버의 <code>~/hideawaylab-web/.env.local</code> 파일에{" "}
-                <code>GEMINI_API_KEY=...</code>를 추가하고{" "}
-                <code>pm2 restart hideaway-web --update-env</code>를 실행하면
-                바로 실제 AI 협업이 시작됩니다.
+                <code>GEMINI_API_KEY=...</code>를 추가하고 재시작하면 실제 AI
+                협업이 시작됩니다.
               </p>
             </div>
           </div>
@@ -487,17 +563,15 @@ export function WorkspaceDashboard({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-xs font-medium text-emerald-300">
               <Sparkles className="h-4 w-4" />
-              <span>CEO COMMAND BAR</span>
+              <span>CEO COMMAND BAR · 6-AGENT QUALITY PIPELINE</span>
             </div>
             <span className="text-[11px] text-zinc-400">
-              {collabMode === "fast"
-                ? "빠른 협업: 1회 호출 (무료 티어 권장 · 약 5~10초)"
-                : "정밀 협업: 5단계 순차 호출 (심층 분석 · 약 25~45초)"}
+              총괄 PM · 리뷰어(고성능) + 기획·개발·마케팅·재무(무료 기본)
             </span>
           </div>
 
           <h1 className="mt-2 text-xl font-bold text-white">
-            오늘 AI 팀에게 어떤 업무를 지시할까요?
+            오늘 6인 AI 팀에게 어떤 업무를 지시할까요?
           </h1>
 
           <form onSubmit={handleAddDirective} className="mt-4 space-y-3">
@@ -507,7 +581,7 @@ export function WorkspaceDashboard({
                 value={directive}
                 onChange={(e) => setDirective(e.target.value)}
                 disabled={isSubmitting}
-                placeholder="예: 1인 사업자용 영수증 정리 앱 기획서 작성하고 MVP 기술 스택과 런칭 카피 만들어 줘"
+                placeholder="예: 1인 사업자용 영수증 정리 앱을 기획하고 정확한 개발·운영 비용과 손익분기점까지 분석해 줘"
                 className="flex-1 rounded-xl border border-white/12 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-emerald-400/60 focus:outline-none disabled:opacity-60"
               />
               <button
@@ -518,7 +592,7 @@ export function WorkspaceDashboard({
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>AI 협업 중...</span>
+                    <span>협업·리뷰 중...</span>
                   </>
                 ) : (
                   <>
@@ -529,49 +603,94 @@ export function WorkspaceDashboard({
               </button>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
+            {/* Tiered Model & Quality Loop Controls */}
+            <div className="flex flex-wrap items-center gap-2.5 pt-1 text-xs">
               <div className="inline-flex rounded-xl border border-white/10 bg-black/30 p-1">
                 <button
                   type="button"
                   disabled={isSubmitting}
                   onClick={() => setCollabMode("fast")}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition ${
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium transition ${
                     collabMode === "fast"
                       ? "bg-emerald-500/20 text-emerald-200"
                       : "text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
                   <Zap className="h-3.5 w-3.5" />
-                  <span>빠른 협업 (1회)</span>
+                  <span>빠른 협업 + 리뷰</span>
                 </button>
                 <button
                   type="button"
                   disabled={isSubmitting}
                   onClick={() => setCollabMode("deep")}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition ${
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium transition ${
                     collabMode === "deep"
                       ? "bg-emerald-500/20 text-emerald-200"
                       : "text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
                   <Layers className="h-3.5 w-3.5" />
-                  <span>정밀 협업 (5단계)</span>
+                  <span>정밀 6인 순차 + 리뷰</span>
                 </button>
               </div>
 
-              <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-1.5 text-zinc-400">
-                <span>모델</span>
+              <label className="inline-flex items-center gap-2 rounded-xl border border-rose-400/20 bg-rose-500/[0.06] px-3 py-1.5 text-zinc-300">
+                <span className="text-rose-300">PM·리뷰어</span>
                 <select
-                  value={model}
+                  value={leaderModel}
                   disabled={isSubmitting}
-                  onChange={(e) => setModel(e.target.value as GeminiModelId)}
+                  onChange={(e) =>
+                    setLeaderModel(e.target.value as LeaderModelId)
+                  }
+                  className="bg-transparent font-medium text-white focus:outline-none"
+                >
+                  <option value="gemini-4-hydrogen" className="bg-[#101217]">
+                    Gemini 4 Hydrogen (무료 지원 · 기본)
+                  </option>
+                  <option value="gemini-4-argon" className="bg-[#101217]">
+                    Gemini 4 Argon (유료 키 전용 · 고성능)
+                  </option>
+                  <option value="gemini-4-neon" className="bg-[#101217]">
+                    Gemini 4 Neon (유료 키 전용 · 최고성능)
+                  </option>
+                </select>
+              </label>
+
+              <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-1.5 text-zinc-400">
+                <span>실무 4인</span>
+                <select
+                  value={workerModel}
+                  disabled={isSubmitting}
+                  onChange={(e) =>
+                    setWorkerModel(e.target.value as WorkerModelId)
+                  }
                   className="bg-transparent font-medium text-zinc-100 focus:outline-none"
                 >
                   <option value="gemini-3.5-flash-lite" className="bg-[#101217]">
-                    Gemini 3.5 Flash-Lite (초고속·최저비용)
+                    Flash-Lite (무료 · 기본)
                   </option>
                   <option value="gemini-4-hydrogen" className="bg-[#101217]">
-                    Gemini 4 Hydrogen (고품질·균형형)
+                    Gemini 4 Hydrogen (상향)
+                  </option>
+                </select>
+              </label>
+
+              <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-1.5 text-zinc-400">
+                <span>리뷰 상한</span>
+                <select
+                  value={maxReviewRounds}
+                  disabled={isSubmitting}
+                  onChange={(e) => setMaxReviewRounds(Number(e.target.value))}
+                  className="bg-transparent font-medium text-zinc-100 focus:outline-none"
+                >
+                  <option value={1} className="bg-[#101217]">
+                    1라운드
+                  </option>
+                  <option value={2} className="bg-[#101217]">
+                    2라운드 (추천)
+                  </option>
+                  <option value={3} className="bg-[#101217]">
+                    3라운드
                   </option>
                 </select>
               </label>
@@ -582,8 +701,8 @@ export function WorkspaceDashboard({
             <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-200">
               <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
               <span>
-                총괄 PM · 기획 · 개발 · 마케팅 AI가 지시를 분석하고 보고서를
-                작성 중입니다. 잠시만 기다려 주세요...
+                6인 AI 팀이 기획·개발·마케팅·재무 분석을 수행하고, 품질 리뷰어
+                AI가 검수 및 필요 시 재토론을 진행 중입니다. (약 15~60초 소요)
               </span>
             </div>
           )}
@@ -597,18 +716,34 @@ export function WorkspaceDashboard({
         </section>
 
         {/* Status Summary */}
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {(["전체", "승인 대기", "완료", "오류"] as const).map((label) => (
-            <div
-              key={label}
-              className="rounded-2xl border border-white/8 bg-[#101217] p-4"
-            >
-              <p className="text-xs text-zinc-500">{label}</p>
-              <p className="mt-1 text-2xl font-bold text-white">
-                {statusCounts[label]}
-              </p>
-            </div>
-          ))}
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          {(
+            ["전체", "회의 소집", "승인 대기", "완료", "오류"] as const
+          ).map((label) => {
+            const isUrgentMeeting =
+              label === "회의 소집" && statusCounts["회의 소집"] > 0;
+            return (
+              <div
+                key={label}
+                className={`rounded-2xl border p-4 ${
+                  isUrgentMeeting
+                    ? "border-rose-400/45 bg-rose-500/10"
+                    : "border-white/8 bg-[#101217]"
+                }`}
+              >
+                <p
+                  className={`text-xs ${
+                    isUrgentMeeting ? "font-semibold text-rose-300" : "text-zinc-500"
+                  }`}
+                >
+                  {isUrgentMeeting ? "🚨 회의 소집" : label}
+                </p>
+                <p className="mt-1 text-2xl font-bold text-white">
+                  {statusCounts[label]}
+                </p>
+              </div>
+            );
+          })}
         </section>
 
         {/* 2-Column Workspace Board & Detail Report */}
@@ -620,7 +755,7 @@ export function WorkspaceDashboard({
                 업무 목록 ({tasks.length})
               </h2>
               <span className="text-[11px] text-zinc-500">
-                클릭하여 보고서 확인
+                클릭하여 보고서 · 재무 · 토론 확인
               </span>
             </div>
 
@@ -648,28 +783,38 @@ export function WorkspaceDashboard({
                       }}
                       className={`w-full rounded-2xl border p-4 text-left transition ${
                         isSelected
-                          ? "border-emerald-400/45 bg-emerald-500/[0.07]"
-                          : "border-white/8 bg-[#101217] hover:border-white/15"
+                          ? task.status === "회의 소집"
+                            ? "border-rose-400/60 bg-rose-500/[0.09]"
+                            : "border-emerald-400/45 bg-emerald-500/[0.07]"
+                          : task.status === "회의 소집"
+                            ? "border-rose-400/30 bg-[#141015] hover:border-rose-400/50"
+                            : "border-white/8 bg-[#101217] hover:border-white/15"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-mono text-[11px] text-zinc-500">
-                          {task.id} ·{" "}
-                          {task.mode === "deep" ? "정밀 5단계" : "빠른 협업"}
+                          {task.id}
+                          {task.reviewScore !== null
+                            ? ` · 리뷰 ${task.reviewScore}점`
+                            : ""}
                         </span>
                         <span
                           className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
                             task.status === "완료"
                               ? "bg-emerald-500/15 text-emerald-300"
-                              : task.status === "승인 대기"
-                                ? "bg-amber-500/15 text-amber-300"
-                                : task.status === "오류"
-                                  ? "bg-red-500/15 text-red-300"
-                                  : "bg-sky-500/15 text-sky-300"
+                              : task.status === "회의 소집"
+                                ? "bg-rose-500/20 text-rose-200"
+                                : task.status === "승인 대기"
+                                  ? "bg-amber-500/15 text-amber-300"
+                                  : task.status === "오류"
+                                    ? "bg-red-500/15 text-red-300"
+                                    : "bg-sky-500/15 text-sky-300"
                           }`}
                         >
                           {task.status === "완료" ? (
                             <CheckCircle2 className="h-3 w-3" />
+                          ) : task.status === "회의 소집" ? (
+                            <BellRing className="h-3 w-3" />
                           ) : task.status === "오류" ? (
                             <AlertTriangle className="h-3 w-3" />
                           ) : (
@@ -684,8 +829,13 @@ export function WorkspaceDashboard({
                       </h3>
 
                       <div className="mt-2.5 flex items-center justify-between text-[11px] text-zinc-500">
-                        <span className="font-mono">{task.model}</span>
-                        <span>{formatTime(task.updatedAt)}</span>
+                        <span className="truncate font-mono">
+                          {task.leaderModel.replace("gemini-", "")} /{" "}
+                          {task.workerModel.replace("gemini-", "")}
+                        </span>
+                        <span className="shrink-0">
+                          {formatTime(task.updatedAt)}
+                        </span>
                       </div>
                     </button>
                   );
@@ -699,24 +849,37 @@ export function WorkspaceDashboard({
             {!selectedTask ? (
               <div className="flex h-64 flex-col items-center justify-center text-center text-xs text-zinc-500">
                 <FileText className="h-8 w-8 text-zinc-700" />
-                <p className="mt-3">좌측에서 업무를 선택하면 상세 보고서가 표시됩니다.</p>
+                <p className="mt-3">
+                  좌측에서 업무를 선택하면 상세 보고서와 재무 분석이 표시됩니다.
+                </p>
               </div>
             ) : (
               <div className="space-y-5">
                 {/* Task Header */}
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/8 pb-4">
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-xs text-emerald-400">
                         {selectedTask.id}
                       </span>
+                      {selectedTask.reviewScore !== null && (
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-medium ${
+                            selectedTask.reviewScore >= 85
+                              ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
+                              : "border-rose-400/30 bg-rose-500/10 text-rose-200"
+                          }`}
+                        >
+                          <Award className="h-3 w-3" />
+                          리뷰어 {selectedTask.reviewScore}점 (
+                          {selectedTask.reviewRounds}라운드)
+                        </span>
+                      )}
                       <span className="rounded-md bg-white/5 px-2 py-0.5 font-mono text-[10px] text-zinc-400">
-                        {selectedTask.model}
+                        리더: {selectedTask.leaderModel}
                       </span>
-                      <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] text-zinc-400">
-                        {selectedTask.mode === "deep"
-                          ? "정밀 5단계 협업"
-                          : "빠른 협업"}
+                      <span className="rounded-md bg-white/5 px-2 py-0.5 font-mono text-[10px] text-zinc-400">
+                        실무: {selectedTask.workerModel}
                       </span>
                     </div>
                     <h2 className="text-lg font-bold text-white">
@@ -729,7 +892,7 @@ export function WorkspaceDashboard({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {selectedTask.finalReport && (
+                    {(selectedTask.finalReport || selectedTask.financeSummary) && (
                       <button
                         type="button"
                         onClick={() => handleCopyReport(selectedTask)}
@@ -743,7 +906,11 @@ export function WorkspaceDashboard({
                         ) : (
                           <>
                             <Copy className="h-3.5 w-3.5" />
-                            <span>보고서 복사</span>
+                            <span>
+                              {activeTab === "finance"
+                                ? "재무표 복사"
+                                : "보고서 복사"}
+                            </span>
                           </>
                         )}
                       </button>
@@ -759,6 +926,72 @@ export function WorkspaceDashboard({
                     </button>
                   </div>
                 </div>
+
+                {/* Emergency Meeting Callout Panel (When Reviewer Summons CEO) */}
+                {selectedTask.status === "회의 소집" &&
+                  selectedTask.meetingAgenda && (
+                    <div className="space-y-4 rounded-2xl border border-rose-400/45 bg-gradient-to-br from-rose-500/15 via-amber-500/[0.07] to-[#121015] p-5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-rose-200">
+                          <BellRing className="h-4 w-4 text-rose-300" />
+                          <span>
+                            품질 리뷰어 긴급 회의 소집 · 대표님 결정 요청
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={busyTaskId === selectedTask.id}
+                          onClick={() => handleApprove(selectedTask.id)}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 py-1.5 text-xs font-semibold text-zinc-950 transition hover:bg-emerald-400 disabled:opacity-60"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <span>이 수준으로 승인</span>
+                        </button>
+                      </div>
+
+                      <div className="whitespace-pre-wrap rounded-xl border border-white/10 bg-black/40 p-4 text-xs leading-relaxed text-zinc-100">
+                        {selectedTask.meetingAgenda}
+                      </div>
+
+                      {isAuthenticated && (
+                        <form
+                          onSubmit={(e) =>
+                            handleGuidedDebate(e, selectedTask.id)
+                          }
+                          className="flex flex-col gap-2 sm:flex-row"
+                        >
+                          <input
+                            type="text"
+                            value={meetingGuidance}
+                            onChange={(e) => setMeetingGuidance(e.target.value)}
+                            disabled={busyTaskId === selectedTask.id}
+                            placeholder="대표님 회의 지침 입력 (예: 월 운영비 2만 원 이하 기준으로 기능 줄여서 1라운드 더 토론해 줘)"
+                            className="flex-1 rounded-xl border border-rose-300/25 bg-black/50 px-3.5 py-2.5 text-xs text-white placeholder:text-zinc-400 focus:border-rose-400/60 focus:outline-none"
+                          />
+                          <button
+                            type="submit"
+                            disabled={
+                              busyTaskId === selectedTask.id ||
+                              !meetingGuidance.trim()
+                            }
+                            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {busyTaskId === selectedTask.id ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                <span>추가 토론 중...</span>
+                              </>
+                            ) : (
+                              <>
+                                <MessagesSquare className="h-3.5 w-3.5" />
+                                <span>추가 토론 지시</span>
+                              </>
+                            )}
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  )}
 
                 {/* Error Banner + Retry */}
                 {selectedTask.errorMessage && (
@@ -783,34 +1016,48 @@ export function WorkspaceDashboard({
                   </div>
                 )}
 
-                {/* Tabs: Final Report vs Agent Logs */}
-                <div className="flex items-center gap-2 border-b border-white/8 pb-3">
+                {/* 3 Tabs: Final Report / Finance Analysis / Debate & Review Logs */}
+                <div className="flex flex-wrap items-center gap-2 border-b border-white/8 pb-3">
                   <button
                     type="button"
                     onClick={() => setActiveTab("report")}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                       activeTab === "report"
                         ? "bg-white/12 text-white"
                         : "text-zinc-400 hover:text-zinc-200"
                     }`}
                   >
-                    총괄 PM 최종 보고서
+                    <FileText className="h-3.5 w-3.5" />
+                    <span>총괄 PM 최종 보고서</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("finance")}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                      activeTab === "finance"
+                        ? "bg-cyan-500/20 text-cyan-200"
+                        : "text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    <Calculator className="h-3.5 w-3.5" />
+                    <span>재무 · 비용 분석</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setActiveTab("logs")}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                       activeTab === "logs"
                         ? "bg-white/12 text-white"
                         : "text-zinc-400 hover:text-zinc-200"
                     }`}
                   >
-                    AI 에이전트 협업 로그 ({selectedTask.logs.length})
+                    <MessagesSquare className="h-3.5 w-3.5" />
+                    <span>토론 · 리뷰 로그 ({selectedTask.logs.length})</span>
                   </button>
                 </div>
 
                 {/* Content Area */}
-                {activeTab === "report" ? (
+                {activeTab === "report" && (
                   <div className="rounded-xl border border-white/8 bg-black/30 p-5">
                     {selectedTask.finalReport ? (
                       <div className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-200">
@@ -818,12 +1065,33 @@ export function WorkspaceDashboard({
                       </div>
                     ) : (
                       <p className="text-xs text-zinc-500">
-                        아직 최종 보고서가 생성되지 않았습니다. 협업 로그 탭에서
-                        중간 진행 내용을 확인해 주세요.
+                        아직 최종 보고서가 생성되지 않았습니다. 토론·리뷰 로그
+                        탭에서 진행 내역을 확인해 주세요.
                       </p>
                     )}
                   </div>
-                ) : (
+                )}
+
+                {activeTab === "finance" && (
+                  <div className="rounded-xl border border-cyan-400/20 bg-cyan-950/15 p-5">
+                    <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-cyan-300">
+                      <Calculator className="h-4 w-4" />
+                      <span>재무 분석가 AI 정밀 비용 · 손익 보고</span>
+                    </div>
+                    {selectedTask.financeSummary ? (
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-200">
+                        {selectedTask.financeSummary}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-zinc-400">
+                        이 업무에는 저장된 재무 분석 요약이 없습니다. (이전 4인
+                        버전에서 생성된 업무일 수 있습니다.)
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "logs" && (
                   <div className="space-y-3">
                     {selectedTask.logs.map((log) => (
                       <div
@@ -857,12 +1125,12 @@ export function WorkspaceDashboard({
                   </div>
                 )}
 
-                {/* Human-in-the-Loop Approval / Revision Controls */}
+                {/* Human-in-the-Loop Approval / Direct Revision Controls */}
                 <div className="space-y-3 border-t border-white/8 pt-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-xs text-zinc-400">
                       <UserCheck className="h-4 w-4 text-emerald-400" />
-                      <span>대표자 검수 (Human-in-the-Loop)</span>
+                      <span>대표자 최종 검수 (Human-in-the-Loop)</span>
                     </div>
 
                     {selectedTask.status !== "완료" && (
@@ -887,7 +1155,7 @@ export function WorkspaceDashboard({
                       value={revisionText}
                       onChange={(e) => setRevisionText(e.target.value)}
                       disabled={busyTaskId === selectedTask.id}
-                      placeholder="보완할 점이 있다면 수정 지시를 입력하세요 (예: 월 구독 가격을 3,900원으로 낮춰서 수익성 다시 계산해 줘)"
+                      placeholder="직접 수정 지시 입력 (예: 월 구독료를 3,900원으로 낮춰서 손익분기점 다시 계산해 줘)"
                       className="flex-1 rounded-xl border border-white/12 bg-black/40 px-3.5 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:border-emerald-400/60 focus:outline-none disabled:opacity-60"
                     />
                     <button
@@ -905,7 +1173,7 @@ export function WorkspaceDashboard({
                       ) : (
                         <>
                           <MessageSquarePlus className="h-3.5 w-3.5" />
-                          <span>수정 지시</span>
+                          <span>직접 수정 지시</span>
                         </>
                       )}
                     </button>

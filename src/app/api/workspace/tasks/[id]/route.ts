@@ -4,6 +4,7 @@ import { addAgentLog, deleteTask, getTaskWithLogs, updateTask } from "@/lib/db";
 import {
   isGeminiConfigured,
   reviseTaskWithFeedback,
+  runGuidedDebateRound,
   runTaskOrchestration,
 } from "@/lib/ai-orchestrator";
 
@@ -49,7 +50,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     const note =
       typeof payload.note === "string" && payload.note.trim()
         ? payload.note.trim()
-        : "대표자 최종 승인 완료";
+        : existing.status === "회의 소집"
+          ? "긴급 회의 검토 후 현재 수준으로 대표자 최종 승인 완료"
+          : "대표자 최종 승인 완료";
 
     addAgentLog({
       taskId: id,
@@ -61,9 +64,31 @@ export async function PATCH(request: Request, context: RouteContext) {
     const updated = updateTask(id, {
       status: "완료",
       ceoFeedback: note,
+      meetingAgenda: null,
       errorMessage: null,
     });
 
+    return NextResponse.json({ task: updated });
+  }
+
+  if (payload.action === "debate") {
+    const feedback =
+      typeof payload.feedback === "string" ? payload.feedback.trim() : "";
+    if (feedback.length < 2 || feedback.length > 1500) {
+      return NextResponse.json(
+        { error: "추가 토론 가이드라인은 2자 이상 1,500자 이하로 입력해 주세요." },
+        { status: 400 }
+      );
+    }
+
+    if (!isGeminiConfigured()) {
+      return NextResponse.json(
+        { error: "GEMINI_API_KEY가 서버에 설정되지 않았습니다." },
+        { status: 503 }
+      );
+    }
+
+    const updated = await runGuidedDebateRound(id, feedback);
     return NextResponse.json({ task: updated });
   }
 

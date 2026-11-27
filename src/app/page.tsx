@@ -21,6 +21,14 @@ const accentStyles = {
     badge: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
     dot: "bg-emerald-400",
   },
+  rose: {
+    badge: "border-rose-400/30 bg-rose-500/10 text-rose-300",
+    dot: "bg-rose-400",
+  },
+  cyan: {
+    badge: "border-cyan-400/30 bg-cyan-500/10 text-cyan-300",
+    dot: "bg-cyan-400",
+  },
   sky: {
     badge: "border-sky-400/30 bg-sky-500/10 text-sky-300",
     dot: "bg-sky-400",
@@ -87,16 +95,16 @@ export default function HomePage() {
 
                 <div className="grid max-w-lg grid-cols-3 gap-4 border-t border-white/10 pt-6">
                   <div>
-                    <p className="text-xl font-semibold text-white">4 Agents</p>
-                    <p className="mt-0.5 text-xs text-zinc-500">역할별 AI 협업 조직</p>
+                    <p className="text-xl font-semibold text-white">6 Agents</p>
+                    <p className="mt-0.5 text-xs text-zinc-500">리뷰·재무 포함 AI 조직</p>
                   </div>
                   <div>
                     <p className="text-xl font-semibold text-white">1-Person</p>
                     <p className="mt-0.5 text-xs text-zinc-500">신속한 독립 의사결정</p>
                   </div>
                   <div>
-                    <p className="text-xl font-semibold text-emerald-300">Phase 1</p>
-                    <p className="mt-0.5 text-xs text-zinc-500">공식 스튜디오 오픈</p>
+                    <p className="text-xl font-semibold text-emerald-300">Phase 2</p>
+                    <p className="mt-0.5 text-xs text-zinc-500">AI 협업 엔진 가동 중</p>
                   </div>
                 </div>
               </div>
@@ -131,14 +139,14 @@ export default function HomePage() {
                     },
                     {
                       step: "03",
-                      actor: "Specialist Agents",
-                      desc: "시장 조사 · 코드 구현 · 카피라이팅 병렬 수행",
-                      status: "Collaborate",
+                      actor: "Specialist Agents & Reviewer",
+                      desc: "기획·개발·마케팅·재무 협업 후 품질 리뷰어 검수 및 재토론",
+                      status: "Debate & QA",
                     },
                     {
                       step: "04",
-                      actor: "대표 최종 승인",
-                      desc: "결과물 검수 후 프로덕션 배포 및 출시 확정",
+                      actor: "대표 최종 승인 / 긴급 회의",
+                      desc: "리뷰 통과 보고서 승인 또는 쟁점 발생 시 긴급 회의 결정",
                       status: "Approve",
                     },
                   ].map((item) => (
@@ -343,12 +351,13 @@ export default function HomePage() {
                   하이드어웨이 랩의 AI 협업 조직
                 </h2>
                 <p className="mt-3 text-sm leading-relaxed text-zinc-400 sm:text-base">
-                  각 영역에 특화된 4명의 AI 에이전트가 대표자의 지시를 바탕으로
-                  역할을 나누어 업무를 수행합니다.
+                  고성능 리더·검수층(총괄 PM, 품질 리뷰어)과 4명의 실무 전문
+                  AI(재무·기획·개발·마케팅)가 서로 토론하고 검증하며 업무를
+                  완성합니다.
                 </p>
               </div>
 
-              <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {siteConfig.agents.map((agent) => {
                   const style = accentStyles[agent.accent];
                   return (
@@ -356,12 +365,15 @@ export default function HomePage() {
                       key={agent.id}
                       className="rounded-2xl border border-white/8 bg-[#101217]/80 p-5"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <span
                           className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${style.badge}`}
                         >
                           <Bot className="h-3 w-3" />
                           {agent.koreanName}
+                        </span>
+                        <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] text-zinc-400">
+                          {agent.tier}
                         </span>
                       </div>
                       <p className="mt-4 font-mono text-xs text-zinc-500">
@@ -400,15 +412,18 @@ export default function HomePage() {
               </div>
 
               <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {siteConfig.roadmap.map((step, index) => {
-                  const active = index === 0;
+                {siteConfig.roadmap.map((step) => {
+                  const active = step.status === "진행 중";
+                  const completed = step.status === "완료";
                   return (
                     <div
                       key={step.phase}
                       className={`rounded-2xl border p-5 ${
                         active
                           ? "border-emerald-400/40 bg-emerald-500/[0.06]"
-                          : "border-white/8 bg-white/[0.02]"
+                          : completed
+                            ? "border-emerald-400/20 bg-white/[0.03]"
+                            : "border-white/8 bg-white/[0.02]"
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -419,7 +434,9 @@ export default function HomePage() {
                           className={`rounded-full px-2 py-0.5 text-[11px] ${
                             active
                               ? "bg-emerald-400/20 text-emerald-200"
-                              : "bg-white/5 text-zinc-400"
+                              : completed
+                                ? "bg-emerald-500/15 text-emerald-300"
+                                : "bg-white/5 text-zinc-400"
                           }`}
                         >
                           {step.status}

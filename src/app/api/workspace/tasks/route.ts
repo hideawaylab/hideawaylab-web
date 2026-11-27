@@ -3,12 +3,14 @@ import { getCeoSession } from "@/lib/auth";
 import {
   createTask,
   listTasksWithLogs,
-  type GeminiModelId,
+  type LeaderModelId,
   type TaskMode,
+  type WorkerModelId,
 } from "@/lib/db";
 import {
-  ALLOWED_MODELS,
+  ALLOWED_LEADER_MODELS,
   ALLOWED_MODES,
+  ALLOWED_WORKER_MODELS,
   isGeminiConfigured,
   runTaskOrchestration,
 } from "@/lib/ai-orchestrator";
@@ -51,7 +53,9 @@ export async function POST(request: Request) {
   const payload = body as {
     directive?: unknown;
     mode?: unknown;
-    model?: unknown;
+    leaderModel?: unknown;
+    workerModel?: unknown;
+    maxReviewRounds?: unknown;
   };
 
   const directive =
@@ -67,11 +71,23 @@ export async function POST(request: Request) {
     ? (payload.mode as TaskMode)
     : "fast";
 
-  const model: GeminiModelId = ALLOWED_MODELS.includes(
-    payload.model as GeminiModelId
+  const leaderModel: LeaderModelId = ALLOWED_LEADER_MODELS.includes(
+    payload.leaderModel as LeaderModelId
   )
-    ? (payload.model as GeminiModelId)
+    ? (payload.leaderModel as LeaderModelId)
+    : "gemini-4-hydrogen";
+
+  const workerModel: WorkerModelId = ALLOWED_WORKER_MODELS.includes(
+    payload.workerModel as WorkerModelId
+  )
+    ? (payload.workerModel as WorkerModelId)
     : "gemini-3.5-flash-lite";
+
+  const parsedRounds = Number(payload.maxReviewRounds);
+  const maxReviewRounds =
+    Number.isInteger(parsedRounds) && parsedRounds >= 1 && parsedRounds <= 3
+      ? parsedRounds
+      : 2;
 
   if (!isGeminiConfigured()) {
     return NextResponse.json(
@@ -83,7 +99,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const created = createTask({ directive, mode, model });
+  const created = createTask({
+    directive,
+    mode,
+    leaderModel,
+    workerModel,
+    maxReviewRounds,
+  });
   const completed = await runTaskOrchestration(created.id);
 
   return NextResponse.json({ task: completed }, { status: 201 });

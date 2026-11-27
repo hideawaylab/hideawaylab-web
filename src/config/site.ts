@@ -13,9 +13,10 @@ export interface AgentRole {
   id: string;
   role: string;
   koreanName: string;
+  tier: "리더 · 검수 (고성능)" | "실무 팀원";
   summary: string;
   responsibilities: string[];
-  accent: "emerald" | "sky" | "amber" | "violet";
+  accent: "emerald" | "rose" | "sky" | "amber" | "violet" | "cyan";
 }
 
 export const siteConfig = {
@@ -39,11 +40,11 @@ export const siteConfig = {
       id: "ai-workspace",
       code: "CORE · 00",
       name: "Hideaway AI Workspace",
-      tagline: "AI 1인 기업 멀티 에이전트 협업 플랫폼",
+      tagline: "6인 AI 멀티 에이전트 협업 · 리뷰 플랫폼",
       description:
-        "대표의 지시를 총괄 PM AI가 업무 단위로 분해하고, 기획·개발·마케팅 에이전트가 협업해 결과물을 보고하면 대표가 최종 승인하는 전용 운영 시스템입니다.",
+        "대표의 지시를 총괄 PM AI가 분해하고, 기획·개발·마케팅·재무 AI가 협업한 결과를 품질 리뷰어 AI가 검수·재토론시킨 뒤 대표가 최종 승인하는 1인 기업 운영 시스템입니다.",
       status: "진행 중",
-      tags: ["Next.js", "FastAPI", "Gemini API", "Human-in-the-Loop"],
+      tags: ["Next.js", "Gemini API", "SQLite", "Quality Gate"],
       href: "/workspace",
     },
     {
@@ -52,7 +53,7 @@ export const siteConfig = {
       name: "First Utility App",
       tagline: "첫 번째 자체 출시 실용 앱 (준비 중)",
       description:
-        "하이드어웨이 랩의 AI 협업 파이프라인을 실전 투입해 기획부터 개발, 마케팅까지 완주하는 첫 번째 독립 소프트웨어 프로젝트입니다.",
+        "하이드어웨이 랩의 6인 AI 협업 파이프라인을 실전 투입해 기획·재무 검증·개발·마케팅까지 완주하는 첫 번째 독립 소프트웨어 프로젝트입니다.",
       status: "기획 예정",
       tags: ["Web / Mobile", "AI Assistant", "Coming Soon"],
     },
@@ -72,32 +73,84 @@ export const siteConfig = {
       id: "pm",
       role: "Chief PM Agent",
       koreanName: "총괄 PM AI",
-      summary: "대표의 목표를 실행 가능한 태스크로 분해하고 최종 품질을 검수합니다.",
-      responsibilities: ["요구사항 분석 및 작업 분배", "일정 및 진행 상태 추적", "산출물 통합 및 최종 보고"],
+      tier: "리더 · 검수 (고성능)",
+      summary:
+        "대표의 목표를 실행 가능한 태스크로 분해하고 팀 토론을 조율해 최종 보고서를 통합합니다.",
+      responsibilities: [
+        "요구사항 분석 및 4개 실무팀 분배",
+        "재토론 의견 조율 및 보고서 통합",
+        "대표자 최종 결재 보고서 작성",
+      ],
       accent: "emerald",
+    },
+    {
+      id: "reviewer",
+      role: "Quality Reviewer Agent",
+      koreanName: "품질 리뷰어 AI",
+      tier: "리더 · 검수 (고성능)",
+      summary:
+        "대표 지시대로 결과가 나왔는지 냉정하게 채점하고, 미달 시 리젝·재토론 또는 긴급 회의를 소집합니다.",
+      responsibilities: [
+        "대표 지시 충족도 100점 기준 검수",
+        "미달 시 리젝 및 AI 팀 재토론 지시",
+        "쟁점 미해결 시 긴급 회의 소집 · 대표 호출",
+      ],
+      accent: "rose",
+    },
+    {
+      id: "finance",
+      role: "Finance Analyst Agent",
+      koreanName: "재무 분석가 AI",
+      tier: "실무 팀원",
+      summary:
+        "프로젝트에 드는 초기 구축비, 월 운영비, API 비용과 손익분기점을 정밀하게 분석합니다.",
+      responsibilities: [
+        "초기 투자비 · 월 고정/변동 운영비 산출",
+        "무료 티어 vs 유료 전환 시점 비용 시뮬레이션",
+        "손익분기점(BEP) 및 3단계 수익 시나리오",
+      ],
+      accent: "cyan",
     },
     {
       id: "research",
       role: "Research & Product Agent",
       koreanName: "기획 · 리서치 AI",
-      summary: "시장과 사용자 문제를 조사하고 명확한 서비스 기획서(PRD)를 작성합니다.",
-      responsibilities: ["경쟁 서비스 및 트렌드 조사", "핵심 기능 정의 및 UX 설계", "수익화 모델 가설 수립"],
+      summary:
+        "시장과 사용자 문제를 조사하고 명확한 서비스 기획서(PRD)와 MVP 범위를 작성합니다.",
+      tier: "실무 팀원",
+      responsibilities: [
+        "경쟁 서비스 및 사용자 페인포인트 조사",
+        "핵심 MVP 기능 정의 및 UX 흐름 설계",
+        "수익화 모델 및 검증 가설 수립",
+      ],
       accent: "sky",
     },
     {
       id: "engineering",
       role: "Engineering Agent",
       koreanName: "개발 AI",
-      summary: "웹·앱 프론트엔드와 백엔드 아키텍처를 구현하고 자동화 배포를 지원합니다.",
-      responsibilities: ["UI/UX 및 API 코드 구현", "오류 디버깅 및 리팩토링", "GitHub · Vercel 배포 파이프라인"],
+      tier: "실무 팀원",
+      summary:
+        "1인 기업 환경에 최적화된 풀스택 아키텍처와 구현 단계를 설계하고 배포를 지원합니다.",
+      responsibilities: [
+        "기술 스택 · DB 스키마 · 화면 구조 설계",
+        "구현 난이도 및 기술 리스크 사전 점검",
+        "오라클 서버 · CI/CD 배포 파이프라인",
+      ],
       accent: "amber",
     },
     {
       id: "growth",
       role: "Growth & Copy Agent",
       koreanName: "마케팅 · 카피 AI",
-      summary: "제품의 가치를 명확한 언어로 다듬고 고객과 만나는 접점을 설계합니다.",
-      responsibilities: ["브랜드 메시지 및 랜딩 카피", "출시 콘텐츠 및 SEO 최적화", "고객 피드백 정리 및 개선안 도출"],
+      tier: "실무 팀원",
+      summary:
+        "제품의 가치를 명확한 언어로 다듬고 0원으로 시작하는 초기 고객 확보 전략을 설계합니다.",
+      responsibilities: [
+        "브랜드 네이밍 · 핵심 슬로건 · 랜딩 카피",
+        "SEO 및 저비용 초기 유입 채널 설계",
+        "고객 피드백 정리 및 전환율 개선안 도출",
+      ],
       accent: "violet",
     },
   ] as AgentRole[],
@@ -105,26 +158,30 @@ export const siteConfig = {
     {
       phase: "Phase 1",
       title: "브랜드 기반 & 공식 웹페이지",
-      status: "진행 중",
-      detail: "hideawaylab.kr 도메인 연결, 공식 홈페이지 오픈, 대표자 전용 로그인(Supabase Auth) 구축",
+      status: "완료",
+      detail:
+        "hideawaylab.kr 도메인 연결, 오라클 클라우드 자동 HTTPS 배포, 대표자 전용 자체 로그인 구축 완료",
     },
     {
       phase: "Phase 2",
-      title: "AI 1인 기업 협업 엔진 MVP",
-      status: "다음 단계",
-      detail: "FastAPI + Gemini API 기반 멀티 에이전트 파이프라인 및 실시간 협업 대시보드 구현",
+      title: "6인 AI 협업 · 리뷰 엔진",
+      status: "진행 중",
+      detail:
+        "Gemini API + SQLite 기반 6인 AI 협업, 재무 분석, 리뷰어 리젝·재토론 및 긴급 회의 소집 시스템 가동",
     },
     {
       phase: "Phase 3",
-      title: "실무 도구 연동 & 승인 자동화",
+      title: "실무 도구 연동 & 자동화",
       status: "예정",
-      detail: "웹 검색, 문서 생성, GitHub, 이메일 연동 및 대표자 승인(Human-in-the-loop) 프로세스 고도화",
+      detail:
+        "실시간 웹 검색, 문서 내보내기(MD/PDF), GitHub, 이메일 연동 및 파일 분석 기능 고도화",
     },
     {
       phase: "Phase 4",
       title: "자체 수익화 앱 출시 & 확장",
       status: "예정",
-      detail: "첫 자체 앱 개발 실전 투입, 지속적인 프로덕트 론칭 및 플랫폼 SaaS 확장 검토",
+      detail:
+        "첫 자체 앱 개발 실전 투입, 지속적인 프로덕트 론칭 및 플랫폼 SaaS 확장 검토",
     },
   ],
 };
